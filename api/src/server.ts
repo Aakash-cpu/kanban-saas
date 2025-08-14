@@ -1,0 +1,35 @@
+import express from "express";
+import cors from "cors";
+import helmet from "helmet";
+import morgan from "morgan";
+import cookieParser from "cookie-parser";
+import { createServer } from "http";
+import { Server as IOServer } from "socket.io";
+import { ENV } from "./config/env";
+import { connectDB } from "./db";
+import health from "./routes/health";
+import auth from "./routes/auth";
+import boards from "./routes/boards";
+import lists from "./routes/lists";
+import cards from "./routes/cards";
+import { errorHandler } from "./middleware/error";
+async function main() {
+  await connectDB(ENV.MONGO_URI);
+  const app = express();
+  const httpServer = createServer(app);
+  const io = new IOServer(httpServer, { cors: { origin: ENV.CLIENT_URL, credentials: true } });
+  app.use(morgan("dev"));
+  app.use(helmet());
+  app.use(cors({ origin: ENV.CLIENT_URL, credentials: true }));
+  app.use(express.json());
+  app.use(cookieParser());
+  app.use("/api/health", health);
+  app.use("/api/auth", auth);
+  app.use("/api/boards", boards);
+  app.use("/api/lists", lists);
+  app.use("/api/cards", cards);
+  io.on("connection", (socket) => { socket.on("board:event", (payload) => { socket.broadcast.emit("board:event", payload); }); });
+  app.use(errorHandler);
+  httpServer.listen(ENV.PORT, () => { console.log(`🚀 API listening on http://localhost:${ENV.PORT}`); });
+}
+main().catch((e) => { console.error(e); process.exit(1); });

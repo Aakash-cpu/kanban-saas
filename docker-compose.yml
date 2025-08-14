@@ -1,0 +1,20 @@
+version: "3.9"
+services:
+  mongo:
+    image: mongo:7
+    container_name: kanban_mongo
+    ports: ["27017:27017"]
+    volumes: ["mongo:/data/db"]
+  api:
+    build: ./api
+    container_name: kanban_api
+    env_file: ./api/.env
+    ports: ["4000:4000"]
+    depends_on: [mongo]
+  web:
+    build: ./web
+    container_name: kanban_web
+    ports: ["5173:5173"]
+    depends_on: [api]
+volumes:
+  mongo: {}
